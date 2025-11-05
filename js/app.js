@@ -1,4 +1,3 @@
-// js/app.js
 import { loginUser, logoutUser, fetchEvents, createEvent } from './api.js';
 
 // DOM Elements
@@ -17,36 +16,46 @@ const checkAuthState = () => {
     const token = localStorage.getItem('access_token');
     
     if (token) {
-        loginContainer.style.display = 'none';
-        appContainer.style.display = 'block';
-        logoutBtn.style.display = 'inline';
-        loginMessage.textContent = ''; 
+        // User is logged in
+        loginContainer.classList.add('d-none');
+        appContainer.classList.remove('d-none');
+        logoutBtn.classList.remove('d-none');
+        loginMessage.innerHTML = ''; // Clear login messages
         loadEvents();
     } else {
-        loginContainer.style.display = 'block';
-        appContainer.style.display = 'none';
-        logoutBtn.style.display = 'none';
-        eventListContainer.innerHTML = '<p>Please log in to see events and access features.</p>';
+        // User is logged out
+        loginContainer.classList.remove('d-none');
+        appContainer.classList.add('d-none');
+        logoutBtn.classList.add('d-none');
+        eventListContainer.innerHTML = '<div class="alert alert-info">Please log in to see events and access features.</div>';
     }
 };
 
 // --- Data Loading & Rendering ---
 
 const renderEvent = (event) => {
-    // Renders one event card using data fields from the serializer
+    // Renders one event card using Bootstrap's Card component
+    const startTime = new Date(event.start_time).toLocaleString();
+    const description = event.description ? event.description.substring(0, 100) + '...' : 'No description provided.';
+    
     return `
-        <div class="event-card">
-            <h3>${event.title}</h3>
-            <p><strong>Organizer:</strong> ${event.organizer}</p>
-            <p><strong>When:</strong> ${new Date(event.start_time).toLocaleString()}</p>
-            <p><strong>Attendees:</strong> ${event.rsvps_count}</p>
-            <p>${event.description.substring(0, 100)}...</p>
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title">${event.title}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">Organized by: ${event.organizer}</h6>
+                <p class="card-text">${description}</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>When:</strong> ${startTime}</li>
+                    <li class="list-group-item"><strong>Location:</strong> ${event.location || 'Not specified'}</li>
+                    <li class="list-group-item"><strong>Attendees:</strong> ${event.rsvps_count}</li>
+                </ul>
+            </div>
         </div>
     `;
 };
 
 const loadEvents = async () => {
-    eventListContainer.innerHTML = '<p>Loading events...</p>';
+    eventListContainer.innerHTML = '<div class="alert alert-info">Loading events...</div>';
     try {
         const data = await fetchEvents();
         
@@ -54,12 +63,12 @@ const loadEvents = async () => {
             let html = data.results.map(renderEvent).join('');
             eventListContainer.innerHTML = html;
         } else {
-            eventListContainer.innerHTML = '<p>No events found.</p>';
+            eventListContainer.innerHTML = '<div class="alert alert-secondary">No events found.</div>';
         }
 
     } catch (error) {
         console.error('Failed to load events:', error);
-        eventListContainer.innerHTML = '<p style="color: red;">Error loading events. Check console for details (CORS/Network error likely).</p>';
+        eventListContainer.innerHTML = '<div class="alert alert-danger">Error loading events. Check console for details (CORS/Network error likely).</div>';
     }
 };
 
@@ -69,7 +78,8 @@ loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = e.target.username.value;
     const password = e.target.password.value;
-    loginMessage.textContent = 'Logging in...';
+    // Use Bootstrap alerts for messages
+    loginMessage.innerHTML = '<div class="alert alert-info">Logging in...</div>';
 
     try {
         await loginUser(username, password);
@@ -78,7 +88,7 @@ loginForm.addEventListener('submit', async (e) => {
     } catch (error) {
         // Failure
         console.error('Login Failed:', error);
-        loginMessage.textContent = 'Login failed. Invalid credentials or API error.';
+        loginMessage.innerHTML = '<div class="alert alert-danger">Login failed. Invalid credentials or API error.</div>';
     }
 });
 
@@ -96,7 +106,7 @@ createEventForm.addEventListener('submit', async (e) => {
         description: e.target.description.value,
         location: e.target.location.value,
         start_time: e.target.start_time.value,
-        end_time: e.target.end_time.value,
+        end_time: e.target.end_time.value || null, // Handle empty end time
         is_public: e.target.is_public.checked,
     };
     
